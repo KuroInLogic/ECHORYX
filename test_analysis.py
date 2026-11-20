@@ -1,26 +1,33 @@
 
-from services.analysis_service import analyze_listening_data
+from services.analysis_service import analyze_user_activity
 
-print("Analyzing Last.fm listening behaviour...")
+print("Analyzing user listening behaviour...")
 print("This may take a few minutes.\n")
 
-results = analyze_listening_data()
+results = analyze_user_activity()
 
-print("\n========== ECHORYX LISTENING ANALYSIS ==========")
+print("\n========== ECHORYX USER ANALYSIS ==========")
 
-print("\nTop 10 Artists:")
-for artist, plays in results["top_artists"]:
-    print(f"{artist}: {plays}")
+print(f"\nTotal users: {results['total_users']}")
+print(f"Total listening events: {results['total_plays']:,}")
 
-print("\nTop 10 Tracks:")
-for track, plays in results["top_tracks"]:
-    print(f"{track[0]} - {track[1]}: {plays}")
+print("\nListening Activity Statistics:")
+print(f"Average plays: {results['average_plays']:,.2f}")
+print(f"Median plays: {results['median_plays']:,.2f}")
+print(f"Minimum plays: {results['minimum_plays']:,}")
+print(f"Maximum plays: {results['maximum_plays']:,}")
+
+print("\nUser Activity Percentiles:")
+print(f"25th percentile: {results['percentile_25']:,.2f}")
+print(f"75th percentile: {results['percentile_75']:,.2f}")
 
 print("\nTop 10 Most Active Users:")
 for user, plays in results["top_users"]:
-    print(f"{user}: {plays}")
+    print(f"{user}: {plays:,}")
 
-print(f"\nTotal users: {results['total_users']}")
-print(f"Average plays per user: {results['average_plays_per_user']:.2f}")
+print("\nUser Activity Distribution:")
+for group, count in results["activity_groups"].items():
+    print(f"{group}: {count} users")
 
-print("\n================================================")
+print("\n===========================================")
+
