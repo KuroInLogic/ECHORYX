@@ -1,0 +1,200 @@
+/*  ECHORYX — DESIGN SYSTEM   */
+
+:root {
+    --bg-main: #100e19;
+    --bg-sidebar: #171421;
+    --bg-card: #211c2d;
+    --bg-card-hover: #272039;
+
+    --accent: #b99af5;
+    --accent-bright: #d5baff;
+
+    --text-primary: #f5f0ff;
+    --text-secondary: #b9b0c9;
+
+    --border: rgba(190, 160, 245, 0.13);
+}
+
+/* Main application */
+
+.stApp {
+    background:
+        radial-gradient(
+            ellipse at 75% 0%,
+            rgba(100, 65, 150, 0.13),
+            transparent 45%
+        ),
+        var(--bg-main);
+
+    color: var(--text-primary);
+}
+
+/* Sidebar */
+
+[data-testid="stSidebar"] {
+    background: var(--bg-sidebar);
+    border-right: 1px solid var(--border);
+}
+
+/* Main content spacing */
+
+.block-container {
+    padding-top: 2.5rem;
+    padding-bottom: 3rem;
+    max-width: 1500px;
+}
+
+/* Hero section */
+
+.hero {
+    position: relative;
+    overflow: hidden;
+
+    background: linear-gradient(
+        115deg,
+        #302044,
+        #22243d,
+        #191d31
+    );
+
+    padding: 55px 42px;
+    border: 1px solid var(--border);
+    border-radius: 22px;
+
+    animation: fadeUp 0.8s ease both;
+}
+
+.hero h1 {
+    color: white;
+    font-size: clamp(32px, 4vw, 52px);
+    font-weight: 750;
+    letter-spacing: -1.8px;
+}
+
+.hero p {
+    color: #c7bdd8;
+    font-size: 16px;
+}
+
+/* Section headings */
+
+.section-title {
+    font-size: 24px;
+    font-weight: 650;
+    color: var(--text-primary);
+    margin-top: 32px;
+    margin-bottom: 18px;
+}
+
+/* Interactive feature cards */
+
+.feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 17px;
+
+    padding: 25px;
+    min-height: 155px;
+
+    transition:
+        transform 0.3s ease,
+        background 0.3s ease,
+        border-color 0.3s ease,
+        box-shadow 0.3s ease;
+}
+
+.feature-card:hover {
+    transform: translateY(-7px) scale(1.015);
+    background: var(--bg-card-hover);
+    border-color: rgba(190, 160, 245, 0.4);
+
+    box-shadow:
+        0 12px 35px rgba(0, 0, 0, 0.25),
+        0 0 20px rgba(160, 110, 230, 0.08);
+}
+
+.feature-card h3 {
+    color: var(--accent-bright);
+    font-size: 19px;
+}
+
+.feature-card p {
+    color: var(--text-secondary);
+    font-size: 14px;
+    line-height: 1.7;
+}
+
+/* Buttons */
+
+.stButton > button {
+    border-radius: 12px;
+    border: 1px solid var(--border);
+
+    transition: all 0.25s ease;
+}
+
+.stButton > button:hover {
+    transform: translateY(-3px) scale(1.025);
+    border-color: var(--accent);
+    box-shadow: 0 5px 20px rgba(185, 154, 245, 0.15);
+}
+
+/* Search inputs */
+
+.stTextInput input {
+    background: #211c2d;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    color: white;
+
+    transition: border-color 0.25s ease;
+}
+
+.stTextInput input:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(185, 154, 245, 0.12);
+}
+
+/* Animations */
+
+@keyframes fadeUp {
+    from {
+        opacity: 0;
+        transform: translateY(18px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes softGlow {
+    0%, 100% {
+        box-shadow: 0 0 12px rgba(185, 154, 245, 0.08);
+    }
+
+    50% {
+        box-shadow: 0 0 25px rgba(185, 154, 245, 0.2);
+    }
+}
+
+
+/* Hide Streamlit's default top toolbar */
+
+[data-testid="stToolbar"] {
+    display: none;
+}
+
+[data-testid="stHeader"] {
+    background: transparent;
+}
+
+[data-testid="stDecoration"] {
+    display: none;
+}
+
+/* Remove unnecessary top spacing */
+.block-container {
+    padding-top: 2rem;
+}

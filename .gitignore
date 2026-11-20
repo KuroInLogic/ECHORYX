@@ -1,0 +1,30 @@
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Last.fm dataset
+data/*.tsv
+data/*.zip
+
+# Model files
+models/*.pth
+models/*.pt
+models/*.pkl
+models/*.joblib
+
+# Secrets
+.env
+.env.*
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
