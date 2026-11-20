@@ -41,6 +41,9 @@ def show_activity():
     print("\nActivity distribution:")
     for group, count in results["activity_groups"].items():
         print(f"{group}: {count} users")
+    print("\nUser activity percentiles:")
+    print(f"25th percentile: {results['percentile_25']:,.2f}")
+    print(f"75th percentile: {results['percentile_75']:,.2f}")
 
 
 def show_diversity():
