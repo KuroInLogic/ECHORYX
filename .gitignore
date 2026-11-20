@@ -28,3 +28,6 @@ models/*.joblib
 .idea/
 .DS_Store
 Thumbs.db
+
+# Generated datasets
+data/processed/
