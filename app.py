@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 import html
 from pathlib import Path
-from services.popularity_service import recommend_for_user
+from services.user_cf_service import recommend_for_user
 from services.profile_service import recommend_from_preferences
 
 
@@ -290,6 +290,7 @@ elif page == "Explore":
         display_track_cards(popularity, 10)
 
 
+
 # =========================================================
 # DISCOVER — EXISTING LAST.FM USERS
 # =========================================================
@@ -297,7 +298,10 @@ elif page == "Explore":
 elif page == "Discover":
 
     st.markdown("# Discover")
-    st.caption("Explore music through existing Last.fm listening profiles.")
+    st.caption(
+        "Explore personalised recommendations based on "
+        "similar Last.fm listeners."
+    )
 
     user_ids = sorted(train["user_idx"].unique().tolist())
 
@@ -317,10 +321,14 @@ elif page == "Discover":
 
     if st.button("Generate recommendations", type="primary"):
 
-        recommendations = recommend_for_user(
-            int(selected_user),
-            n=recommendation_count
-        )
+        with st.spinner("Finding listeners with similar music taste..."):
+
+            recommendations = recommend_for_user(
+                user_idx=int(selected_user),
+                train=train,
+                tracks=tracks,
+                n=recommendation_count
+            )
 
         st.session_state["demo_recommendations"] = recommendations
         st.session_state["demo_recommendation_user"] = selected_user
@@ -333,10 +341,33 @@ elif page == "Discover":
 
             section_heading(
                 "Recommended for this listener",
-                "Based on global popularity, excluding tracks in the listener's training history."
+                "Ranked using listening-pattern similarity and "
+                "tracks enjoyed by similar listeners."
             )
 
-            display_track_cards(recommendations, recommendation_count)
+            if not recommendations.empty:
+
+                display_track_cards(
+                    recommendations,
+                    recommendation_count
+                )
+
+                st.caption(
+                    "Recommendations are generated using "
+                    "user-based collaborative filtering with "
+                    "cosine similarity."
+                )
+
+            else:
+
+                st.warning(
+                    "We couldn't find suitable recommendations "
+                    "for this listener."
+                )
+
+                st.info(
+                    "Try selecting another listener profile."
+                )
 
 
 # =========================================================
@@ -590,6 +621,7 @@ elif page == "My Library":
     display_track_table(library, 50)
 
 
+
 # =========================================================
 # MODEL INSIGHTS
 # =========================================================
@@ -597,11 +629,58 @@ elif page == "My Library":
 elif page == "Model Insights":
 
     st.markdown("# Model Insights")
-    st.caption("Understanding how the ECHORYX recommendation engine performs.")
+    st.caption(
+        "Explore the recommendation approaches powering ECHORYX."
+    )
 
     section_heading(
-        "Popularity-based recommendation",
-        "Current evaluation results from the held-out temporal test set."
+        "Recommendation models",
+        "Three approaches designed for different music discovery scenarios."
+    )
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.markdown("""
+        <div class="feature-card">
+            <h3>01 · Popularity-Based</h3>
+            <p>
+                Ranks tracks using listener count and total plays.
+                Provides a global recommendation baseline.
+            </p>
+            <p><strong>Status:</strong> Evaluated</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div class="feature-card">
+            <h3>02 · User-Based CF</h3>
+            <p>
+                Uses cosine similarity to identify listeners
+                with similar listening histories.
+            </p>
+            <p><strong>Status:</strong> Implemented</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col3:
+        st.markdown("""
+        <div class="feature-card">
+            <h3>03 · Preference-Based</h3>
+            <p>
+                Uses favourite artists to identify similar
+                listeners for new-user recommendations.
+            </p>
+            <p><strong>Status:</strong> Implemented</p>
+        </div>
+        """, unsafe_allow_html=True)
+
+    st.divider()
+
+    section_heading(
+        "Popularity model evaluation",
+        "Results from the held-out temporal test dataset."
     )
 
     c1, c2, c3 = st.columns(3)
@@ -609,10 +688,6 @@ elif page == "Model Insights":
     c1.metric("Precision@10", "0.1302")
     c2.metric("Recall@10", "0.0025")
     c3.metric("NDCG@10", "0.1348")
-
-    st.divider()
-
-    section_heading("Evaluation statistics")
 
     evaluation_data = pd.DataFrame({
         "Metric": [
@@ -639,22 +714,35 @@ elif page == "Model Insights":
         hide_index=True
     )
 
-    section_heading("How does it work?")
+    st.divider()
 
-    st.markdown("""
-    The current baseline ranks tracks using:
+    section_heading("How the models work")
 
-    - Unique listener count.
-    - Total listening plays.
+    with st.expander("Popularity-Based Recommendation"):
+        st.write(
+            "Ranks tracks using unique listener count and total "
+            "plays from the training dataset. Tracks already "
+            "heard by the target listener are excluded."
+        )
 
-    Tracks already present in the selected listener's training
-    history are excluded.
+    with st.expander("User-Based Collaborative Filtering"):
+        st.write(
+            "Calculates cosine similarity between binary listening "
+            "histories. It identifies similar listeners and ranks "
+            "unheard tracks using similarity-weighted play counts."
+        )
 
-    The popularity statistics are calculated exclusively
-    from the training dataset.
-    """)
+    with st.expander("Preference-Based Recommendation"):
+        st.write(
+            "Matches a new user's favourite artists against the "
+            "historical listening data, identifies listeners who "
+            "share those preferences, and recommends other tracks "
+            "from their listening histories."
+        )
 
     st.info(
-        "The Create Your Music Profile feature uses a separate "
-        "preference-based recommendation approach."
+        "Only the popularity-based model has completed the "
+        "current quantitative evaluation. User-Based CF and "
+        "Preference-Based recommendations are implemented, "
+        "but their evaluation is still pending."
     )
