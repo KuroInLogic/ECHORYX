@@ -54,6 +54,7 @@ def prepare_interactions(
                 artist_name TEXT,
                 track_name TEXT,
                 play_count INTEGER NOT NULL DEFAULT 0,
+                last_timestamp TEXT NOT NULL,
                 PRIMARY KEY (user_id, track_key)
             )
         """)
@@ -65,6 +66,7 @@ def prepare_interactions(
 
                 play_counts = Counter()
                 metadata = {}
+                latest_timestamps = {}
 
                 for row in chunk.itertuples(index=False):
 
@@ -76,6 +78,9 @@ def prepare_interactions(
 
                     pair = (row.user_id, track_key)
                     play_counts[pair] += 1
+                    timestamp = str(row.timestamp)
+                    if pair not in latest_timestamps or timestamp > latest_timestamps[pair]:
+                        latest_timestamps[pair] = timestamp
 
                     if pair not in metadata:
                         metadata[pair] = (
@@ -89,18 +94,20 @@ def prepare_interactions(
                         track_key,
                         metadata[(user_id, track_key)][0],
                         metadata[(user_id, track_key)][1],
-                        count
+                        count,
+                        latest_timestamps[(user_id, track_key)]
                     )
                     for (user_id, track_key), count in play_counts.items()
                 ]
 
                 connection.executemany("""
                     INSERT INTO interactions
-                    (user_id, track_key, artist_name, track_name, play_count)
-                    VALUES (?, ?, ?, ?, ?)
+                    (user_id, track_key, artist_name, track_name, play_count, last_timestamp)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     ON CONFLICT(user_id, track_key)
                     DO UPDATE SET
-                        play_count = play_count + excluded.play_count
+                        play_count = play_count + excluded.play_count,
+                        last_timestamp = MAX(interactions.last_timestamp, excluded.last_timestamp)
                 """, records)
 
                 connection.commit()
@@ -216,7 +223,8 @@ def prepare_interactions(
                 SELECT
                     um.user_idx,
                     tm.track_idx,
-                    i.play_count
+                    i.play_count,
+                    i.last_timestamp
                 FROM interactions i
                 JOIN user_map um ON i.user_id = um.user_id
                 JOIN track_map tm ON i.track_key = tm.track_key
