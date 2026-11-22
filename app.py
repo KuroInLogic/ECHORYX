@@ -622,6 +622,7 @@ elif page == "My Library":
 
 
 
+
 # =========================================================
 # MODEL INSIGHTS
 # =========================================================
@@ -630,12 +631,17 @@ elif page == "Model Insights":
 
     st.markdown("# Model Insights")
     st.caption(
-        "Explore the recommendation approaches powering ECHORYX."
+        "Explore the recommendation algorithms and their "
+        "performance across the Last.fm dataset."
     )
+
+    # -----------------------------------------------------
+    # MODEL OVERVIEW
+    # -----------------------------------------------------
 
     section_heading(
         "Recommendation models",
-        "Three approaches designed for different music discovery scenarios."
+        "Three approaches powering music discovery in ECHORYX."
     )
 
     col1, col2, col3 = st.columns(3)
@@ -645,8 +651,8 @@ elif page == "Model Insights":
         <div class="feature-card">
             <h3>01 · Popularity-Based</h3>
             <p>
-                Ranks tracks using listener count and total plays.
-                Provides a global recommendation baseline.
+                Ranks tracks using unique listener count
+                and total listening plays.
             </p>
             <p><strong>Status:</strong> Evaluated</p>
         </div>
@@ -657,10 +663,10 @@ elif page == "Model Insights":
         <div class="feature-card">
             <h3>02 · User-Based CF</h3>
             <p>
-                Uses cosine similarity to identify listeners
-                with similar listening histories.
+                Uses cosine similarity to identify
+                listeners with similar music preferences.
             </p>
-            <p><strong>Status:</strong> Implemented</p>
+            <p><strong>Status:</strong> Evaluated</p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -669,8 +675,8 @@ elif page == "Model Insights":
         <div class="feature-card">
             <h3>03 · Preference-Based</h3>
             <p>
-                Uses favourite artists to identify similar
-                listeners for new-user recommendations.
+                Uses favourite artists to find similar
+                listeners and recommend other tracks.
             </p>
             <p><strong>Status:</strong> Implemented</p>
         </div>
@@ -678,71 +684,209 @@ elif page == "Model Insights":
 
     st.divider()
 
+    # -----------------------------------------------------
+    # MODEL COMPARISON
+    # -----------------------------------------------------
+
     section_heading(
-        "Popularity model evaluation",
-        "Results from the held-out temporal test dataset."
+        "Model performance comparison",
+        "Popularity-Based vs User-Based Collaborative Filtering."
+    )
+
+    st.caption(
+        "Both models were evaluated using the same "
+        "temporal training and testing split."
     )
 
     c1, c2, c3 = st.columns(3)
 
-    c1.metric("Precision@10", "0.1302")
-    c2.metric("Recall@10", "0.0025")
-    c3.metric("NDCG@10", "0.1348")
+    c1.metric(
+        "Precision@10",
+        "0.1848",
+        delta="+41.9%",
+        help="Improvement over the popularity baseline."
+    )
 
-    evaluation_data = pd.DataFrame({
+    c2.metric(
+        "Recall@10",
+        "0.0038",
+        delta="+52.0%",
+        help="Improvement over the popularity baseline."
+    )
+
+    c3.metric(
+        "NDCG@10",
+        "0.1866",
+        delta="+38.4%",
+        help="Improvement over the popularity baseline."
+    )
+
+    # -----------------------------------------------------
+    # COMPARISON TABLE
+    # -----------------------------------------------------
+
+    section_heading("Detailed comparison")
+
+    comparison = pd.DataFrame({
         "Metric": [
-            "Users evaluated",
-            "Recommendation hits",
-            "Test interactions",
-            "Unique tracks recommended",
-            "Unique cold-start tracks",
-            "Cold-start test interactions"
+            "Precision@10",
+            "Recall@10",
+            "NDCG@10"
         ],
-        "Value": [
-            "951",
-            "1,238",
-            "552,608",
-            "49",
-            "304",
-            "1,860"
+        "Popularity-Based": [
+            0.1302,
+            0.0025,
+            0.1348
+        ],
+        "User-Based CF": [
+            0.1848,
+            0.0038,
+            0.1866
         ]
     })
 
     st.dataframe(
-        evaluation_data,
+        comparison,
+        width="stretch",
+        hide_index=True
+    )
+
+    # -----------------------------------------------------
+    # PERFORMANCE VISUALIZATION
+    # -----------------------------------------------------
+
+    section_heading("Performance visualization")
+
+    selected_metric = st.selectbox(
+        "Select evaluation metric",
+        [
+            "Precision@10",
+            "Recall@10",
+            "NDCG@10"
+        ]
+    )
+
+    metric_values = {
+        "Precision@10": [0.1302, 0.1848],
+        "Recall@10": [0.0025, 0.0038],
+        "NDCG@10": [0.1348, 0.1866]
+    }
+
+    chart_data = pd.DataFrame({
+        "Popularity-Based": [metric_values[selected_metric][0]],
+        "User-Based CF": [metric_values[selected_metric][1]]
+    }, index=["Model Performance"])
+
+    st.bar_chart(
+        chart_data,
+        horizontal=True
+    )
+
+    st.divider()
+
+    # -----------------------------------------------------
+    # ADDITIONAL STATISTICS
+    # -----------------------------------------------------
+
+    section_heading(
+        "Recommendation diversity",
+        "How widely each model distributes its recommendations."
+    )
+
+    d1, d2 = st.columns(2)
+
+    d1.metric(
+        "Popularity unique tracks",
+        "49"
+    )
+
+    d2.metric(
+        "User-CF unique tracks",
+        "921",
+        delta="+872 tracks"
+    )
+
+    stats = pd.DataFrame({
+        "Statistic": [
+            "Users evaluated",
+            "Popularity recommendation hits",
+            "User-CF recommendation hits",
+            "Popularity unique recommended tracks",
+            "User-CF unique recommended tracks",
+            "Test interactions"
+        ],
+        "Value": [
+            "951",
+            "1,238",
+            "1,757",
+            "49",
+            "921",
+            "552,608"
+        ]
+    })
+
+    st.dataframe(
+        stats,
         width="stretch",
         hide_index=True
     )
 
     st.divider()
 
-    section_heading("How the models work")
+    # -----------------------------------------------------
+    # ALGORITHM EXPLANATION
+    # -----------------------------------------------------
 
-    with st.expander("Popularity-Based Recommendation"):
+    section_heading("Understanding the algorithms")
+
+    with st.expander("01 · Popularity-Based Recommendation"):
+
         st.write(
-            "Ranks tracks using unique listener count and total "
-            "plays from the training dataset. Tracks already "
-            "heard by the target listener are excluded."
+            "The baseline model ranks tracks according to "
+            "their unique listener count and total play count "
+            "in the training dataset."
         )
 
-    with st.expander("User-Based Collaborative Filtering"):
         st.write(
-            "Calculates cosine similarity between binary listening "
-            "histories. It identifies similar listeners and ranks "
-            "unheard tracks using similarity-weighted play counts."
+            "Tracks already present in the target listener's "
+            "training history are excluded."
         )
 
-    with st.expander("Preference-Based Recommendation"):
+    with st.expander("02 · User-Based Collaborative Filtering"):
+
         st.write(
-            "Matches a new user's favourite artists against the "
-            "historical listening data, identifies listeners who "
-            "share those preferences, and recommends other tracks "
-            "from their listening histories."
+            "The model represents listeners using their "
+            "binary track-listening histories."
+        )
+
+        st.write(
+            "Cosine similarity identifies listeners with "
+            "overlapping music preferences."
+        )
+
+        st.write(
+            "The top 50 similar listeners contribute their "
+            "listening activity to a similarity-weighted "
+            "recommendation score."
+        )
+
+    with st.expander("03 · Preference-Based Recommendation"):
+
+        st.write(
+            "This approach is designed for users without "
+            "an existing listening history."
+        )
+
+        st.write(
+            "Users select favourite artists. ECHORYX then "
+            "identifies existing listeners who share those "
+            "artist preferences and recommends other tracks "
+            "from their histories."
         )
 
     st.info(
-        "Only the popularity-based model has completed the "
-        "current quantitative evaluation. User-Based CF and "
-        "Preference-Based recommendations are implemented, "
-        "but their evaluation is still pending."
+        "The quantitative comparison currently covers "
+        "Popularity-Based and User-Based CF. Preference-Based "
+        "recommendations have been implemented but have "
+        "not yet undergone independent quantitative evaluation."
     )
