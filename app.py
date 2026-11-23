@@ -1,13 +1,12 @@
-
 import streamlit as st
 import pandas as pd
 import html
-
 from pathlib import Path
-
+from services.explanation_service import explain_hybrid_recommendation
 from services.user_cf_service import recommend_for_user
 from services.profile_service import recommend_from_preferences
 from services.ncf_service import recommend_for_user as recommend_with_ncf
+from services.hybrid_service import recommend_hybrid
 
 
 # =========================================================
@@ -72,7 +71,6 @@ popularity = load_popularity()
 # =========================================================
 
 def section_heading(title, subtitle=None):
-
     st.markdown(
         f'<div class="section-title">{html.escape(title)}</div>',
         unsafe_allow_html=True
@@ -92,11 +90,9 @@ def display_track_cards(data, limit=10):
     data = data.head(limit).reset_index(drop=True)
 
     for start in range(0, len(data), 2):
-
         columns = st.columns(2)
 
         for offset, column in enumerate(columns):
-
             index = start + offset
 
             if index >= len(data):
@@ -117,7 +113,6 @@ def display_track_cards(data, limit=10):
             score = track.get("preference_score")
 
             with column:
-
                 st.markdown(
                     f"""
                     <div class="feature-card track-card">
@@ -195,7 +190,6 @@ def display_track_table(data, limit=20):
 # =========================================================
 
 with st.sidebar:
-
     st.markdown("# 🎧 ECHORYX")
     st.caption("MUSIC, UNDERSTOOD DIFFERENTLY.")
 
@@ -208,6 +202,7 @@ with st.sidebar:
             "Explore",
             "Discover",
             "Neural Recommendations",
+            "Hybrid Recommendations",
             "Create Your Profile",
             "Mood Studio",
             "My Library",
@@ -227,7 +222,6 @@ with st.sidebar:
 # =========================================================
 
 if page == "Home":
-
     st.markdown("""
     <div class="hero">
         <div class="eyebrow">YOUR MUSIC UNIVERSE</div>
@@ -264,7 +258,6 @@ if page == "Home":
     col1, col2 = st.columns(2)
 
     with col1:
-
         st.markdown("""
         <div class="feature-card">
             <h3>♫ Discover music</h3>
@@ -276,7 +269,6 @@ if page == "Home":
         """, unsafe_allow_html=True)
 
     with col2:
-
         st.markdown("""
         <div class="feature-card">
             <h3>✧ Build your sound</h3>
@@ -293,7 +285,6 @@ if page == "Home":
 # =========================================================
 
 elif page == "Explore":
-
     st.markdown("# Explore")
     st.caption("Find artists and tracks from the Last.fm collection.")
 
@@ -303,7 +294,6 @@ elif page == "Explore":
     )
 
     if search:
-
         results = tracks[
             tracks["track_name"].str.contains(
                 search,
@@ -319,11 +309,9 @@ elif page == "Explore":
         ]
 
         st.write(f"Found {len(results):,} matching tracks.")
-
         display_track_table(results, 50)
 
     else:
-
         section_heading("Popular tracks")
         display_track_cards(popularity, 10)
 
@@ -333,7 +321,6 @@ elif page == "Explore":
 # =========================================================
 
 elif page == "Discover":
-
     st.markdown("# Discover")
 
     st.caption(
@@ -359,16 +346,43 @@ elif page == "Discover":
         key="cf_recommendation_count"
     )
 
+
+    st.markdown("### Personalise your discovery")
+
+    available_artists = sorted(
+        tracks["artist_name"].dropna().unique().tolist()
+    )
+
+    selected_artists = st.multiselect(
+        "Which artists would you like to explore?",
+        options=available_artists,
+        max_selections=10,
+        key="hybrid_selected_artists",
+        placeholder="Search and select your favourite artists..."
+    )
+
+    discovery_intensity = st.slider(
+        "Discovery preference influence",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.20,
+        step=0.05,
+        help=(
+            "Controls how strongly your selected artists "
+            "influence the final recommendation ranking."
+        ),
+        key="hybrid_discovery_intensity"
+    )
+
+
     if st.button(
         "Generate recommendations",
         type="primary",
         key="generate_cf"
     ):
-
         with st.spinner(
             "Finding listeners with similar music taste..."
         ):
-
             recommendations = recommend_for_user(
                 user_idx=int(selected_user),
                 train=train,
@@ -387,7 +401,6 @@ elif page == "Discover":
         and st.session_state.get("demo_recommendation_user")
         == selected_user
     ):
-
         recommendations = st.session_state["demo_recommendations"]
 
         section_heading(
@@ -397,7 +410,18 @@ elif page == "Discover":
         )
 
         if not recommendations.empty:
-
+            if recommendations["fallback_used"].any():
+                st.info(
+                    "ECHORYX is using popularity-based recommendations "
+                    "because this listener has limited listening history. "
+                    "Recommendations will become more personalised "
+                    "as more listening data becomes available."
+                )
+            else:
+                st.success(
+                    "Personalised recommendations generated using "
+                    "User-CF, NeuMF and popularity signals."
+                )
             display_track_cards(
                 recommendations,
                 recommendation_count
@@ -410,7 +434,6 @@ elif page == "Discover":
             )
 
         else:
-
             st.warning(
                 "We couldn't find suitable recommendations "
                 "for this listener."
@@ -419,8 +442,6 @@ elif page == "Discover":
             st.info(
                 "Try selecting another listener profile."
             )
-
-
 
 # =========================================================
 # NEURAL RECOMMENDATIONS — NEUMF
@@ -472,13 +493,10 @@ elif page == "Neural Recommendations":
         type="primary",
         key="generate_neumf"
     ):
-
         try:
-
             with st.spinner(
                 "NeuMF is analysing listening patterns..."
             ):
-
                 recommendations = recommend_with_ncf(
                     user_idx=int(selected_user),
                     train=train,
@@ -494,17 +512,14 @@ elif page == "Neural Recommendations":
                 selected_user
             )
 
-            # Use a separate key from the slider's widget key.
             st.session_state["neumf_generated_count"] = (
                 recommendation_count
             )
 
         except FileNotFoundError as error:
-
             st.error(str(error))
 
         except Exception as error:
-
             st.error(
                 f"Could not generate recommendations: {error}"
             )
@@ -514,7 +529,6 @@ elif page == "Neural Recommendations":
         and st.session_state.get("neumf_recommendation_user")
         == selected_user
     ):
-
         recommendations = st.session_state[
             "neumf_recommendations"
         ]
@@ -528,7 +542,6 @@ elif page == "Neural Recommendations":
         )
 
         if not recommendations.empty:
-
             display_track_cards(
                 recommendations,
                 st.session_state.get(
@@ -544,12 +557,128 @@ elif page == "Neural Recommendations":
             )
 
         else:
-
             st.info(
                 "No unseen recommendations were available "
                 "for this listener."
             )
 
+
+# =========================================================
+# HYBRID RECOMMENDATIONS — CF + NEUMF + POPULARITY
+# =========================================================
+
+elif page == "Hybrid Recommendations":
+
+    st.markdown("# Hybrid Recommendations")
+    st.caption(
+        "A combined recommendation engine using listener similarity, "
+        "neural preference scores and overall track popularity."
+    )
+
+    st.markdown("""
+    <div class="hero">
+        <div class="eyebrow">THE ECHORYX HYBRID ENGINE</div>
+        <h1>Three signals. One discovery experience.</h1>
+        <p>
+            Hybrid recommendations combine User-Based Collaborative Filtering,
+            Neural Collaborative Filtering and popularity ranking into one list.
+        </p>
+    </div>
+    """, unsafe_allow_html=True)
+
+    st.write("")
+    user_ids = sorted(train["user_idx"].unique().tolist())
+
+    selected_user = st.selectbox(
+        "Select a listener profile",
+        user_ids,
+        format_func=lambda x: f"Listener {x}",
+        key="hybrid_user"
+    )
+
+    recommendation_count = st.slider(
+        "Number of recommendations",
+        min_value=5,
+        max_value=30,
+        value=10,
+        step=5,
+        key="hybrid_recommendation_count"
+    )
+
+    selected_artists = st.multiselect(
+        "Choose your favourite artists",
+        options=sorted(
+            tracks["artist_name"].dropna().unique().tolist()
+        ),
+        default=[],
+        help="Select artists to personalise your recommendations.",
+        key="hybrid_selected_artists"
+    )
+
+    discovery_intensity = st.slider(
+        "Artist preference influence",
+        min_value=0.0,
+        max_value=1.0,
+        value=0.20,
+        step=0.05,
+        help="Higher values give your selected artist preferences more influence.",
+        key="hybrid_discovery_intensity"
+    )
+
+    if st.button(
+        "Generate hybrid recommendations",
+        type="primary",
+        key="generate_hybrid"
+    ):
+        try:
+            with st.spinner(
+                "Combining collaborative, neural and popularity signals..."
+            ):
+                recommendations = recommend_hybrid(
+                    user_idx=int(selected_user),
+                    train=train,
+                    max_per_artist=2,
+                    tracks=tracks,
+                    n=recommendation_count,
+                    weights={
+                        "user_cf": 0.60,
+                        "ncf": 0.25,
+                        "popularity": 0.15
+                    },
+                    selected_artists=selected_artists,
+                    discovery_intensity=discovery_intensity
+                )
+
+            st.session_state["hybrid_recommendations"] = recommendations
+            st.session_state["hybrid_recommendation_user"] = selected_user
+            st.session_state["hybrid_generated_count"] = recommendation_count
+
+        except Exception as error:
+            st.error(f"Could not generate hybrid recommendations: {error}")
+
+    if (
+        "hybrid_recommendations" in st.session_state
+        and st.session_state.get("hybrid_recommendation_user") == selected_user
+    ):
+        recommendations = st.session_state["hybrid_recommendations"]
+        generated_count = st.session_state.get(
+            "hybrid_generated_count", recommendation_count
+        )
+
+        section_heading(
+            "Recommended for this listener",
+            "Tracks ranked by the combined hybrid score."
+        )
+
+        if not recommendations.empty:
+            display_track_cards(recommendations, generated_count)
+            st.caption(
+                "Hybrid weights: 60% User-Based CF · 25% NeuMF · "
+                "15% Popularity. Tracks in the listener's training history "
+                "are excluded."
+            )
+        else:
+            st.info("No unseen recommendations were available for this listener.")
 
 
 # =========================================================
@@ -603,7 +732,6 @@ elif page == "Create Your Profile":
     )
 
     if artist_search:
-
         matching_artists = [
             artist for artist in available_artists
             if artist_search.casefold() in artist.casefold()
@@ -611,7 +739,6 @@ elif page == "Create Your Profile":
         ][:50]
 
         if matching_artists:
-
             selected_artist = st.selectbox(
                 "Matching artists",
                 matching_artists,
@@ -622,9 +749,7 @@ elif page == "Create Your Profile":
                 "Add artist",
                 key="add_profile_artist"
             ):
-
                 if selected_artist not in st.session_state["profile_artists"]:
-
                     st.session_state["profile_artists"].append(
                         selected_artist
                     )
@@ -634,7 +759,6 @@ elif page == "Create Your Profile":
                 st.rerun()
 
         else:
-
             st.info("No matching artists found.")
 
     section_heading("Your selected artists")
@@ -642,13 +766,10 @@ elif page == "Create Your Profile":
     selected_artists = st.session_state["profile_artists"]
 
     if selected_artists:
-
         for artist in selected_artists:
-
             col1, col2 = st.columns([5, 1])
 
             with col1:
-
                 st.markdown(
                     f"""
                     <div class="feature-card"
@@ -660,12 +781,10 @@ elif page == "Create Your Profile":
                 )
 
             with col2:
-
                 if st.button(
                     "Remove",
                     key=f"remove_{artist}"
                 ):
-
                     st.session_state["profile_artists"].remove(
                         artist
                     )
@@ -675,7 +794,6 @@ elif page == "Create Your Profile":
                     st.rerun()
 
     else:
-
         st.info("You haven't selected any artists yet.")
 
     st.write("")
@@ -694,9 +812,7 @@ elif page == "Create Your Profile":
         type="primary",
         disabled=len(selected_artists) == 0
     ):
-
         with st.spinner("Exploring listening patterns..."):
-
             recommendations, statistics = recommend_from_preferences(
                 selected_artists=selected_artists,
                 train=train,
@@ -713,7 +829,6 @@ elif page == "Create Your Profile":
     recommendations = st.session_state["profile_recommendations"]
 
     if recommendations is not None:
-
         st.divider()
 
         section_heading(
@@ -736,25 +851,71 @@ elif page == "Create Your Profile":
             f"{statistics['matched_artists']:,}"
         )
 
+        
         if not recommendations.empty:
+            display_track_cards(recommendations, generated_count)
 
-            display_track_cards(
-                recommendations,
-                recommendation_count
+            st.divider()
+            section_heading(
+                "Why these tracks?",
+                "Understand the signals behind each recommendation."
             )
 
+            for index, (_, track) in enumerate(
+                recommendations.iterrows(), start=1
+            ):
+                explanation = explain_hybrid_recommendation(track)
+
+                track_name = track.get("track_name", f"Track {index}")
+                artist_name = track.get("artist_name", "Unknown artist")
+
+                with st.expander(
+                    f"{index}. {track_name} — {artist_name}"
+                ):
+                    st.write(explanation["explanation"])
+
+                    st.markdown("**Recommendation signal breakdown**")
+
+                    scores = explanation["component_scores"]
+
+                    col1, col2, col3 = st.columns(3)
+
+                    col1.metric(
+                        "User-CF",
+                        f'{scores["User-CF"]:.3f}'
+                    )
+
+                    col2.metric(
+                        "NeuMF",
+                        f'{scores["NeuMF"]:.3f}'
+                    )
+
+                    col3.metric(
+                        "Popularity",
+                        f'{scores["Popularity"]:.3f}'
+                    )
+
+                    st.metric(
+                        "Final Hybrid Score",
+                        f'{explanation["hybrid_score"]:.3f}'
+                    )
+
+                    st.caption(
+                        f'Strongest contributing signal: '
+                        f'{explanation["strongest_signal"]}'
+                    )
+
             st.caption(
-                "These recommendations are inferred from historical "
-                "listening patterns. They are not based on a live "
-                "Spotify or Last.fm account."
+                "Hybrid weights: 60% User-Based CF · 25% NeuMF · "
+                "15% Popularity. Tracks in the listener's training "
+                "history are excluded."
             )
 
         else:
-
-            st.warning(
-                "We couldn't find enough matching listening patterns. "
-                "Try selecting different artists."
+            st.info(
+                "No unseen recommendations were available for this listener."
             )
+
 
 
 # =========================================================
@@ -830,7 +991,6 @@ elif page == "My Library":
 
     display_track_table(library, 50)
 
-
 # =========================================================
 # MODEL INSIGHTS
 # =========================================================
@@ -850,13 +1010,12 @@ elif page == "Model Insights":
 
     section_heading(
         "Recommendation models",
-        "Three evaluated approaches powering music discovery."
+        "Four evaluated approaches powering music discovery."
     )
 
-    col1, col2, col3 = st.columns(3)
+    col1, col2, col3, col4 = st.columns(4)
 
     with col1:
-
         st.markdown("""
         <div class="feature-card">
             <h3>01 · Popularity-Based</h3>
@@ -869,7 +1028,6 @@ elif page == "Model Insights":
         """, unsafe_allow_html=True)
 
     with col2:
-
         st.markdown("""
         <div class="feature-card">
             <h3>02 · User-Based CF</h3>
@@ -882,7 +1040,6 @@ elif page == "Model Insights":
         """, unsafe_allow_html=True)
 
     with col3:
-
         st.markdown("""
         <div class="feature-card">
             <h3>03 · Neural CF (NeuMF)</h3>
@@ -894,15 +1051,28 @@ elif page == "Model Insights":
         </div>
         """, unsafe_allow_html=True)
 
+    with col4:
+        st.markdown("""
+        <div class="feature-card">
+            <h3>04 · Hybrid</h3>
+            <p>
+                Combines User-Based CF, NeuMF and popularity
+                ranking using weighted rank scores.
+            </p>
+            <p><strong>Status:</strong> Evaluated</p>
+        </div>
+        """, unsafe_allow_html=True)
+
     st.divider()
 
+    
     # -----------------------------------------------------
     # MODEL COMPARISON
     # -----------------------------------------------------
 
     section_heading(
         "Model performance comparison",
-        "Popularity-Based vs User-Based CF vs Neural Collaborative Filtering."
+        "Popularity-Based vs User-Based CF vs NeuMF vs Hybrid."
     )
 
     st.caption(
@@ -910,26 +1080,28 @@ elif page == "Model Insights":
         "Top-10 recommendations per user."
     )
 
+    st.caption(
+        "Hybrid weights were selected through exploratory comparisons "
+        "on this evaluation split. Treat these results as provisional "
+        "until confirmed on a separate validation split."
+    )
+
     comparison = pd.DataFrame({
-        "Metric": [
-            "Precision@10",
-            "Recall@10",
-            "NDCG@10"
+        "Model": [
+            "Popularity-Based",
+            "User-Based CF",
+            "NeuMF",
+            "Hybrid (40/40/20)",
+            "Hybrid (60/25/15)"
         ],
-        "Popularity-Based": [
-            0.1302,
-            0.0025,
-            0.1348
+        "Precision@10": [
+            0.1302, 0.1848, 0.1743428, 0.252366, 0.255415
         ],
-        "User-Based CF": [
-            0.1848,
-            0.0038,
-            0.1866
+        "Recall@10": [
+            0.0025, 0.0038, 0.0036315, 0.005407, 0.005388
         ],
-        "NeuMF": [
-            0.1743428,
-            0.0036315,
-            0.1769150
+        "NDCG@10": [
+            0.1348, 0.1866, 0.1769150, 0.264042, 0.267879
         ]
     })
 
@@ -938,6 +1110,103 @@ elif page == "Model Insights":
         width="stretch",
         hide_index=True
     )
+
+    st.divider()
+
+    # -----------------------------------------------------
+    # METRIC VISUALISATION
+    # -----------------------------------------------------
+
+    section_heading(
+        "Performance visualisation",
+        "Compare how accurately each model ranks relevant tracks."
+    )
+
+    selected_metric = st.selectbox(
+        "Select evaluation metric",
+        ["Precision@10", "Recall@10", "NDCG@10"],
+        key="insights_metric"
+    )
+
+    chart_data = comparison[["Model", selected_metric]].set_index("Model")
+
+    st.bar_chart(chart_data)
+
+    # -----------------------------------------------------
+    # BEST MODEL BY METRIC
+    # -----------------------------------------------------
+
+    st.divider()
+
+    section_heading(
+        "Evaluation highlights",
+        "The strongest model depends on the metric being measured."
+    )
+
+    best_precision = comparison.loc[
+        comparison["Precision@10"].idxmax()
+    ]
+
+    best_recall = comparison.loc[
+        comparison["Recall@10"].idxmax()
+    ]
+
+    best_ndcg = comparison.loc[
+        comparison["NDCG@10"].idxmax()
+    ]
+
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        st.metric(
+            "Best Precision@10",
+            best_precision["Model"],
+            f'{best_precision["Precision@10"]:.4f}'
+        )
+
+    with col2:
+        st.metric(
+            "Best Recall@10",
+            best_recall["Model"],
+            f'{best_recall["Recall@10"]:.4f}'
+        )
+
+    with col3:
+        st.metric(
+            "Best NDCG@10",
+            best_ndcg["Model"],
+            f'{best_ndcg["NDCG@10"]:.4f}'
+        )
+
+    # -----------------------------------------------------
+    # METRIC EXPLANATIONS
+    # -----------------------------------------------------
+
+    st.divider()
+
+    section_heading(
+        "Understanding the metrics",
+        "What do these evaluation measurements actually mean?"
+    )
+
+    with st.expander("Precision@10"):
+        st.write(
+            "Measures the proportion of the top 10 recommended tracks "
+            "that are relevant to the user's test listening history."
+        )
+
+    with st.expander("Recall@10"):
+        st.write(
+            "Measures the proportion of relevant test tracks that "
+            "the model successfully retrieves in its top 10 recommendations."
+        )
+
+    with st.expander("NDCG@10"):
+        st.write(
+            "Measures ranking quality by rewarding relevant tracks "
+            "that appear higher in the recommendation list."
+        )
+
 
     # -----------------------------------------------------
     # PERFORMANCE HIGHLIGHTS
@@ -949,26 +1218,27 @@ elif page == "Model Insights":
 
     c1.metric(
         "Best Precision@10",
-        "0.1848",
-        "User-Based CF"
+        "0.2554",
+        "Hybrid (60/25/15)"
     )
 
     c2.metric(
         "Best Recall@10",
-        "0.0038",
-        "User-Based CF"
+        "0.0054",
+        "Hybrid (40/40/20)"
     )
 
     c3.metric(
         "Best NDCG@10",
-        "0.1866",
-        "User-Based CF"
+        "0.2679",
+        "Hybrid (60/25/15)"
     )
 
     st.info(
-        "NeuMF outperforms the popularity baseline across "
-        "all three ranking metrics, but User-Based CF "
-        "currently achieves the strongest overall results."
+        "The hybrid model with 60/25/15 weights achieves the "
+        "strongest Precision@10 and NDCG@10 among the tested "
+        "configurations. The 40/40/20 configuration has a slightly "
+        "higher Recall@10. These are offline evaluation results."
     )
 
     # -----------------------------------------------------
@@ -984,24 +1254,29 @@ elif page == "Model Insights":
             "Recall@10",
             "NDCG@10"
         ],
-        key="insights_metric"
+        key="insights_metric_chart"
     )
 
     metric_values = {
         "Precision@10": [
             0.1302,
             0.1848,
-            0.1743428
+            0.1743428,
+            0.255415
         ],
+
         "Recall@10": [
             0.0025,
             0.0038,
-            0.0036315
+            0.0036315,
+            0.005388
         ],
+
         "NDCG@10": [
             0.1348,
             0.1866,
-            0.1769150
+            0.1769150,
+            0.267879
         ]
     }
 
@@ -1009,12 +1284,19 @@ elif page == "Model Insights":
         "Popularity-Based": [
             metric_values[selected_metric][0]
         ],
+
         "User-Based CF": [
             metric_values[selected_metric][1]
         ],
+
         "NeuMF": [
             metric_values[selected_metric][2]
+        ],
+
+        "Hybrid (60/25/15)": [
+            metric_values[selected_metric][3]
         ]
+
     }, index=["Model Performance"])
 
     st.bar_chart(
@@ -1033,11 +1315,12 @@ elif page == "Model Insights":
         "Number of distinct tracks recommended across all users."
     )
 
-    d1, d2, d3 = st.columns(3)
+    d1, d2, d3, d4 = st.columns(4)
 
     d1.metric("Popularity", "49")
     d2.metric("User-Based CF", "921")
     d3.metric("NeuMF", "2,887")
+    d4.metric("Hybrid", "Not recorded")
 
     stats = pd.DataFrame({
         "Statistic": [
@@ -1048,6 +1331,7 @@ elif page == "Model Insights":
             "Candidate catalogue size",
             "Recommendations per user"
         ],
+
         "Popularity-Based": [
             "951",
             "1,238",
@@ -1056,6 +1340,7 @@ elif page == "Model Insights":
             "175,242",
             "10"
         ],
+
         "User-Based CF": [
             "951",
             "1,757",
@@ -1064,10 +1349,20 @@ elif page == "Model Insights":
             "175,242",
             "10"
         ],
+
         "NeuMF": [
             "951",
             "1,658",
             "2,887",
+            "552,608",
+            "175,242",
+            "10"
+        ],
+
+        "Hybrid (60/25/15)": [
+            "951",
+            "2,430",
+            "Not recorded",
             "552,608",
             "175,242",
             "10"
@@ -1141,6 +1436,25 @@ elif page == "Model Insights":
             "user-track interaction scores. The model is "
             "trained using binary cross-entropy with logits "
             "and negative sampling."
+        )
+
+    with st.expander("04 · Hybrid Recommendation"):
+
+        st.write(
+            "The hybrid engine combines the ranked outputs of "
+            "User-Based Collaborative Filtering, NeuMF and the "
+            "popularity baseline."
+        )
+
+        st.write(
+            "Each model's ranked list is converted into a rank-based "
+            "score, then combined using weighted contributions: "
+            "60% User-Based CF, 25% NeuMF and 15% popularity."
+        )
+
+        st.write(
+            "Tracks already present in the target listener's training "
+            "history are excluded from the final recommendations."
         )
 
     st.info(
