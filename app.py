@@ -186,35 +186,50 @@ def display_track_table(data, limit=20):
 
 
 # =========================================================
-# SIDEBAR
+# ECHORYX — SIMPLE FUNCTIONAL NAVIGATION
 # =========================================================
 
-with st.sidebar:
-    st.markdown("# 🎧 ECHORYX")
-    st.caption("MUSIC, UNDERSTOOD DIFFERENTLY.")
+pages = [
+    "Home",
+    "Explore",
+    "Discover",
+    "Neural Recommendations",
+    "Hybrid Recommendations",
+    "Create Your Profile",
+    "Mood Studio",
+    "My Library",
+    "Model Insights"
+]
 
-    st.divider()
+if "echoryx_page" not in st.session_state:
+    st.session_state["echoryx_page"] = "Home"
 
-    page = st.radio(
-        "NAVIGATION",
-        [
-            "Home",
-            "Explore",
-            "Discover",
-            "Neural Recommendations",
-            "Hybrid Recommendations",
-            "Create Your Profile",
-            "Mood Studio",
-            "My Library",
-            "Model Insights"
-        ],
-        label_visibility="visible"
-    )
 
-    st.divider()
+def navigate_echoryx(destination):
+    st.session_state["echoryx_page"] = destination
 
-    st.caption("POWERED BY LAST.FM 1K")
-    st.caption("ECHORYX · 2026")
+
+page = st.session_state["echoryx_page"]
+
+with st.container(key="echoryx_bottom_dock"):
+
+    dock_columns = st.columns(9, gap="small")
+
+    for column, page_name in zip(dock_columns, pages):
+
+        with column:
+            st.button(
+                page_name,
+                key=f"nav_{page_name}",
+                help=page_name,
+                type="primary" if page == page_name else "secondary",
+                use_container_width=True,
+                on_click=navigate_echoryx,
+                args=(page_name,)
+            )
+
+page = st.session_state["echoryx_page"]
+
 
 
 # =========================================================

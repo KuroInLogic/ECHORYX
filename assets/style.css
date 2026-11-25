@@ -542,3 +542,112 @@ footer {
     font-size: 13px;
     margin-top: 5px;
 }
+
+/* =========================================================
+   ECHORYX — SIMPLE TEXT NAVIGATION RESET
+   ========================================================= */
+
+/* Dock container */
+
+.st-key-echoryx_bottom_dock {
+    position: fixed !important;
+    z-index: 99999 !important;
+    top: 14px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+
+    width: min(1450px, 98vw) !important;
+
+    padding: 10px 14px !important;
+
+    background: rgba(24, 18, 38, 0.96) !important;
+
+    border: 1px solid rgba(177, 126, 255, 0.25) !important;
+    border-radius: 20px !important;
+
+    backdrop-filter: blur(20px) !important;
+
+    box-shadow: 0 10px 35px rgba(0,0,0,0.3) !important;
+}
+
+/* Nine buttons in one row */
+
+.st-key-echoryx_bottom_dock [data-testid="stHorizontalBlock"] {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 10px !important;
+}
+
+.st-key-echoryx_bottom_dock [data-testid="stColumn"] {
+    min-width: 0 !important;
+}
+
+/* Remove all decorative icons and pseudo-elements */
+
+.st-key-echoryx_bottom_dock .stButton > button::before,
+.st-key-echoryx_bottom_dock .stButton > button::after {
+    content: none !important;
+    display: none !important;
+    pointer-events: none !important;
+}
+
+/* Actual navigation buttons */
+
+.st-key-echoryx_bottom_dock .stButton > button {
+
+    position: relative !important;
+
+    height: 48px !important;
+    min-height: 48px !important;
+
+    width: 100% !important;
+
+    padding: 8px 3px !important;
+
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+
+    background: #251b32 !important;
+
+    border: 1px solid rgba(255,255,255,0.12) !important;
+    border-radius: 12px !important;
+
+    color: #eee6fa !important;
+
+    font-size: 12px !important;
+    font-weight: 600 !important;
+
+    box-shadow: none !important;
+
+    transition: background 0.2s ease, border-color 0.2s ease !important;
+}
+
+.st-key-echoryx_bottom_dock .stButton > button p {
+    color: inherit !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    margin: 0 !important;
+    white-space: nowrap !important;
+}
+
+/* Hover */
+
+.st-key-echoryx_bottom_dock .stButton > button:hover {
+    background: #49345e !important;
+    border-color: rgba(190,150,255,0.55) !important;
+}
+
+/* Active page */
+
+.st-key-echoryx_bottom_dock
+.stButton > button[kind="primary"] {
+    background: #bd3e68 !important;
+    border-color: #e36b91 !important;
+    color: #ffffff !important;
+}
+
+.st-key-echoryx_bottom_dock
+.stButton > button[kind="primary"] p {
+    color: #ffffff !important;
+}
